@@ -1,0 +1,35 @@
+@baseUrl = http://127.0.0.1:8080
+@apiToken = local-api-token
+@callbackToken = local-callback-token
+
+### Change batch_no on every run, or expect 409.
+# @name create
+POST {{baseUrl}}/batches
+Authorization: Bearer {{apiToken}}
+Content-Type: application/json
+
+{"batch_no":"demo-manual-001","documents":[{"document_no":"DOC-1","payload":{"mode":"manual"}}]}
+
+### Submit, keep PROCESSING until manual callback
+POST {{baseUrl}}/batches/demo-manual-001/process
+Authorization: Bearer {{apiToken}}
+
+### Status
+GET {{baseUrl}}/batches/demo-manual-001
+Authorization: Bearer {{apiToken}}
+
+### Read id and current attempt_count
+GET {{baseUrl}}/batches/demo-manual-001/documents
+Authorization: Bearer {{apiToken}}
+
+### Replace document_id with ID from create/list response
+POST {{baseUrl}}/callbacks
+Authorization: Bearer {{callbackToken}}
+Content-Type: application/json
+
+{"callback_id":"manual-event-001","document_id":"REPLACE_WITH_ID","attempt_count":1,"status":"SUCCESS"}
+
+### Read next_retry_at in ListDocuments; wait until due. Early retry returns retried=0.
+### Retry only queues eligible FAILED, does not submit
+POST {{baseUrl}}/batches/demo-manual-001/retry
+Authorization: Bearer {{apiToken}}

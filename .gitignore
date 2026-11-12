@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+*.pdf
+*.exe
+bin/
+artifacts/
+*.test
+coverage.out
+pdf-page-*.png

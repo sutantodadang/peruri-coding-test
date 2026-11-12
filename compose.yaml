@@ -1,0 +1,57 @@
+name: peruri-bulk-demo
+services:
+  api:
+    build: .
+    command: ["-migrate"]
+    environment:
+      DATABASE_URL: postgres://peruri:peruri_local@db:5432/peruri?sslmode=disable
+      HTTP_ADDR: :8080
+      PRINCIPAL_URL: http://principal:9000
+      API_TOKEN: ${API_TOKEN:-local-api-token}
+      CALLBACK_TOKEN: ${CALLBACK_TOKEN:-local-callback-token}
+      PRINCIPAL_TOKEN: ${PRINCIPAL_TOKEN:-local-principal-token}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      principal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 20s
+  principal:
+    build: .
+    entrypoint: ["/app/principal"]
+    environment:
+      HTTP_ADDR_PRINCIPAL: :9000
+      CALLBACK_URL: http://api:8080/callbacks
+      CALLBACK_TOKEN: ${CALLBACK_TOKEN:-local-callback-token}
+      PRINCIPAL_TOKEN: ${PRINCIPAL_TOKEN:-local-principal-token}
+    ports:
+      - "127.0.0.1:9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9000/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: peruri
+      POSTGRES_PASSWORD: peruri_local
+      POSTGRES_DB: peruri
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peruri -d peruri"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  postgres-data:
